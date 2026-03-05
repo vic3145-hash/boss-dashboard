@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>366 生產管理系統</title>
+    <style>
+        :root { --bg-color: #f2f4f6; --primary: #6d8293; --primary-dark: #56697a; --accent: #bda29a; --success: #8da399; --text-main: #4a4a4a; --text-light: #888; --white: #ffffff; --card-shadow: 0 4px 20px rgba(0,0,0,0.06); --radius: 12px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+        header { background-color: var(--primary); color: var(--white); padding: 15px 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; position: relative; }
+        .logo { font-size: 1.3rem; font-weight: 700; letter-spacing: 1px; white-space: nowrap; width: 100%; text-align: center; } 
+        .home-btn { font-size: 1.5rem; cursor: pointer; display: none; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); }
+        .container { padding: 20px; max-width: 800px; margin: 0 auto; padding-bottom: 80px; }
+        .welcome-text { text-align: center; font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 25px; font-weight: 500; letter-spacing: 1px; background: #e4e8eb; padding: 10px; border-radius: 8px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .nav-card { background: var(--white); padding: 25px; border-radius: var(--radius); box-shadow: var(--card-shadow); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: space-between; }
+        .nav-card:active { transform: scale(0.98); }
+        .nav-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--white); margin-right: 15px; }
+        .nav-text h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: var(--primary-dark); }
+        .nav-text p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
+        .nav-arrow { color: #ccc; }
+        .page { display: none; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-section { background: var(--white); padding: 20px; border-radius: var(--radius); box-shadow: var(--card-shadow); margin-bottom: 20px; }
+        .form-title { font-size: 1rem; color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: var(--primary); }
+        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: #f9f9f9; outline: none; transition: border 0.3s; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--primary); background: #fff; }
+        .checkbox-group { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f0f4f8; border-radius: 8px; margin-bottom: 15px; }
+        .checkbox-group label { margin: 0; color: var(--text-main); font-weight: 500; }
+        .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--success); }
+        .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(109, 130, 147, 0.3); margin-top: 10px; }
+        .btn-submit:active { background: var(--primary-dark); transform: translateY(1px); }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-add { background: var(--success); width: auto; padding: 8px 15px; margin-bottom: 10px; display: inline-block; font-size: 0.9rem; }
+        .btn-del { color: #ff6b6b; font-weight: bold; cursor: pointer; padding: 5px; }
+        .edit-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .edit-table th { text-align: left; font-size: 0.85rem; color: var(--text-light); padding-bottom: 5px; }
+        .edit-table td { padding: 5px 0; }
+        .edit-table input { width: 100%; padding: 8px; font-size: 0.95rem; }
+        .footer { text-align: center; color: #ccc; font-size: 0.8rem; margin-top: 30px; }
+        
+        /* Loading 遮罩 */
+        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:999; display:none; justify-content:center; align-items:center; flex-direction:column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom:10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div id="loadingText">處理中...</div></div>
+
+<header>
+    <div class="home-btn" id="backBtn" onclick="goHome()">❮</div>
+    <div class="logo">三柳柳食品工廠</div>
+    <div style="width: 24px;"></div> 
+</header>
+
+<div class="container">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+        <div class="welcome-text">🏭 366 生產管理系統</div>
+        <div class="dashboard-grid">
+            <div class="nav-card" onclick="goTo('page-order')">
+                <div style="display:flex; align-items:center;">
+                    <div class="nav-icon" style="background: #8aa2b3;">📝</div>
+                    <div class="nav-text"><h3>訂單管理</h3><p>新增訂單</p></div>
+                </div><div class="nav-arrow">❯</div>
+            </div>
+            <div class="nav-card" onclick="goTo('page-schedule')">
+                <div style="display:flex; align-items:center;">
+                    <div class="nav-icon" style="background: #bda29a;">⚙️</div>
+                    <div class="nav-text"><h3>安排產程</h3><p>編輯每日生產</p></div>
+                </div><div class="nav-arrow">❯</div>
+            </div>
+            <div class="nav-card" onclick="goTo('page-inventory')">
+                <div style="display:flex; align-items:center;">
+                    <div class="nav-icon" style="background: #8da399;">📦</div>
+                    <div class="nav-text"><h3>成品入庫</h3><p>生產入庫 (連動產程)</p></div>
+                </div><div class="nav-arrow">❯</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訂單頁面 -->
+    <div id="page-order" class="page">
+        <div class="form-section">
+            <div class="form-title">📝 新增訂單</div>
+            <div class="input-group"><label>客戶名稱</label><input type="text" id="orderClient" list="clientList" placeholder="輸入或選擇..."><datalist id="clientList"><option value="很牛"><option value="披薩工廠"><option value="好室鍋物"><option value="小小麥"></datalist></div>
+            <div class="input-group"><label>下單日期</label><input type="date" id="orderDate"></div>
+            <div class="input-group"><label>產品名稱</label><input type="text" id="orderProduct" placeholder="輸入產品名稱..."></div>
+            <div class="input-group" style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>數量</label><input type="number" id="orderQty" placeholder="0"></div>
+                <div style="flex:1;"><label>規格</label><input type="text" id="orderSpec" placeholder="例: 1kg/包"></div>
+            </div>
+            <div class="input-group"><label>價格</label><input type="number" id="orderPrice" placeholder="$"></div>
+            <div class="input-group"><label>預計交貨日</label><input type="date" id="deliveryDate"></div>
+            <div class="input-group"><label>備註</label><input type="text" id="orderNote"></div>
+            <div class="checkbox-group"><label>✅ 已安排產程？</label><input type="checkbox" id="orderScheduled"></div>
+            <button class="btn-submit" onclick="submitOrder()">儲存訂單</button>
+        </div>
+    </div>
+
+    <!-- 產程頁面 -->
+    <div id="page-schedule" class="page">
+        <div class="form-section">
+            <div class="form-title">⚙️ 產程編排</div>
+            <div class="input-group"><label>選擇生產日期</label><input type="date" id="scheduleDate"></div>
+            <div style="margin-bottom:10px; font-weight:bold; color:var(--primary);">當日生產列表 <button class="btn-submit btn-add" onclick="addScheduleRow()" style="float:right; margin:0;">+ 新增</button></div>
+            <table class="edit-table" id="scheduleTable">
+                <thead><tr><th style="width:35%">產品名稱</th><th style="width:25%">規格</th><th style="width:15%">數量</th><th style="width:20%">備註</th><th style="width:5%"></th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="checkbox-group" style="margin-top:20px;"><label>📦 原物料已叫貨？</label><input type="checkbox" id="materialOrdered"></div>
+            <button class="btn-submit" onclick="submitSchedule()">儲存產程</button>
+        </div>
+    </div>
+
+    <!-- 入庫頁面 -->
+    <div id="page-inventory" class="page">
+        <div class="form-section">
+            <div class="form-title">📦 成品入庫</div>
+            <div class="input-group"><label>入庫日期 (連動產程)</label><input type="date" id="stockDate" onchange="fetchScheduleForStock()"></div>
+            <div class="input-group">
+                <label>產品名稱 (限當日生產)</label>
+                <select id="stockProduct"><option value="" disabled selected>請先選擇日期...</option></select>
+                <div id="noProdHint" style="font-size:0.8rem; color:#ff6b6b; display:none; margin-top:5px;">⚠️ 讀取中...</div>
+            </div>
+            <div class="input-group" style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>入庫數量</label><input type="number" id="stockQty"></div>
+                <div style="flex:1;"><label>規格</label><input type="text" id="stockSpec" readonly style="background:#eee;"></div>
+            </div>
+            <div class="input-group"><label>流向</label><div style="display:flex; gap:20px; padding:5px;"><label style="display:flex; align-items:center; font-weight:normal;"><input type="radio" name="stockType" value="寄庫" checked style="width:auto; margin-right:5px;"> 寄庫</label><label style="display:flex; align-items:center; font-weight:normal;"><input type="radio" name="stockType" value="產完即出" style="width:auto; margin-right:5px;"> 產完即出</label></div></div>
+            <div class="input-group"><label>凍庫位置</label><input type="text" id="stockLoc"></div>
+            <div class="input-group"><label>備註</label><input type="text" id="stockNote"></div>
+            <button class="btn-submit" onclick="submitInventory()">確認入庫</button>
+        </div>
+    </div>
+
+    <div class="footer">366 OMS v3.0 (Connected)</div>
+</div>
+
+<script>
+    // 🔥 這是您的 Google Apps Script 網址
+    const API_URL = "https://script.google.com/macros/s/AKfycbye3KtVShV24YrAa6G-gKT7fS6JE5qlVcbzr-tRKvhgRDiEATeyEenIxwKqE8kRhS54/exec";
+
+    // 初始化
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+    let currentScheduleData = []; // 暫存產程資料供入庫用
+
+    function goTo(pageId) {
+        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        document.getElementById('backBtn').style.display = (pageId === 'page-dashboard') ? 'none' : 'block';
+        window.scrollTo(0, 0);
+        if(pageId === 'page-schedule' && document.querySelector("#scheduleTable tbody").children.length === 0) addScheduleRow();
+        if(pageId === 'page-inventory') fetchScheduleForStock();
+    }
+    function goHome() { goTo('page-dashboard'); }
+
+    // 通用傳送函數 (AJAX)
+    function sendData(payload, successMsg) {
+        document.getElementById('loading').style.display = 'flex';
+        
+        // 使用 no-cors 模式避免跨域問題 (雖然無法讀取回傳值，但能成功發送)
+        fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            document.getElementById('loading').style.display = 'none';
+            alert("✅ " + successMsg);
+            goHome();
+        }).catch(err => {
+            document.getElementById('loading').style.display = 'none';
+            alert("❌ 發生錯誤: " + err);
+        });
+    }
+
+    // 1. 提交訂單
+    function submitOrder() {
+        const payload = {
+            type: "訂單",
+            values: [
+                document.getElementById('orderClient').value,
+                document.getElementById('orderDate').value,
+                document.getElementById('orderProduct').value,
+                document.getElementById('orderQty').value,
+                document.getElementById('orderSpec').value,
+                document.getElementById('orderPrice').value,
+                document.getElementById('deliveryDate').value,
+                document.getElementById('orderNote').value,
+                document.getElementById('orderScheduled').checked ? "是" : "否"
+            ]
+        };
+        sendData(payload, "訂單已儲存！");
+    }
+
+    // 2. 提交產程
+    function addScheduleRow(item = {name:"", spec:"", qty:"", note:""}) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><input type="text" class="sch-name" value="${item.name}" placeholder="品名"></td>
+            <td><input type="text" class="sch-spec" value="${item.spec}" placeholder="規格"></td>
+            <td><input type="number" class="sch-qty" value="${item.qty}" placeholder="0"></td>
+            <td><input type="text" class="sch-note" value="${item.note}"></td>
+            <td><span class="btn-del" onclick="this.closest('tr').remove()">×</span></td>
+        `;
+        document.querySelector("#scheduleTable tbody").appendChild(row);
+    }
+
+    function submitSchedule() {
+        const date = document.getElementById('scheduleDate').value;
+        const rows = document.querySelectorAll("#scheduleTable tbody tr");
+        let scheduleItems = [];
+        
+        rows.forEach(row => {
+            let name = row.querySelector(".sch-name").value;
+            if(name) {
+                scheduleItems.push({
+                    name: name,
+                    spec: row.querySelector(".sch-spec").value,
+                    qty: row.querySelector(".sch-qty").value,
+                    note: row.querySelector(".sch-note").value
+                });
+            }
+        });
+
+        const payload = {
+            type: "產程",
+            values: [
+                date,
+                JSON.stringify(scheduleItems), // 把整個表格轉成 JSON 字串存一格
+                document.getElementById('materialOrdered').checked ? "是" : "否"
+            ]
+        };
+        sendData(payload, "產程已更新！");
+    }
+
+    // 3. 入庫 (連動讀取)
+    function fetchScheduleForStock() {
+        const date = document.getElementById('stockDate').value;
+        const select = document.getElementById('stockProduct');
+        const hint = document.getElementById('noProdHint');
+        
+        select.innerHTML = '<option>讀取中...</option>';
+        select.disabled = true;
+        
+        // 讀取產程 (GET)
+        fetch(`${API_URL}?date=${date}`)
+        .then(res => res.json())
+        .then(data => {
+            currentScheduleData = data; // 存全域
+            select.innerHTML = '<option value="" disabled selected>選擇產品...</option>';
+            
+            if (data.length > 0) {
+                select.disabled = false;
+                hint.style.display = 'none';
+                data.forEach((item, index) => {
+                    let opt = document.createElement('option');
+                    opt.value = index;
+                    opt.text = `${item.name} (${item.spec})`;
+                    select.add(opt);
+                });
+            } else {
+                select.innerHTML = '<option>無生產資料</option>';
+                hint.innerText = "⚠️ 查無當日產程，請先安排";
+                hint.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            select.innerHTML = '<option>讀取失敗</option>';
+            hint.innerText = "⚠️ 連線錯誤";
+            hint.style.display = 'block';
+        });
+    }
+
+    document.getElementById('stockProduct').addEventListener('change', function() {
+        const index = this.value;
+        const item = currentScheduleData[index];
+        if(item) {
+            document.getElementById('stockSpec').value = item.spec;
+            document.getElementById('stockQty').value = item.qty;
+        }
+    });
+
+    function submitInventory() {
+        const prodIndex = document.getElementById('stockProduct').value;
+        if(prodIndex === "") return alert("請選擇產品");
+        
+        const item = currentScheduleData[prodIndex]; // 取得原始產品名 (不含規格文字)
+        
+        const payload = {
+            type: "入庫",
+            values: [
+                document.getElementById('stockDate').value,
+                item.name,
+                document.getElementById('stockQty').value,
+                document.getElementById('stockSpec').value,
+                document.querySelector('input[name="stockType"]:checked').value,
+                document.getElementById('stockLoc').value,
+                document.getElementById('stockNote').value
+            ]
+        };
+        sendData(payload, "入庫成功！");
+    }
+</script>
+
+</body>
+</html>
