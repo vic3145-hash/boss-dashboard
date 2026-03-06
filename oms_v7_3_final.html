@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>366 OMS v7.3 - 超強韌月曆版</title>
+    <style>
+        :root { --bg-color: #f2f4f6; --primary: #6d8293; --primary-dark: #56697a; --accent: #bda29a; --success: #8da399; --warning: #e6a23c; --danger: #f56c6c; --text-main: #4a4a4a; --text-light: #888; --white: #ffffff; --card-shadow: 0 4px 20px rgba(0,0,0,0.06); --radius: 12px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+        header { background-color: var(--primary); color: var(--white); padding: 15px 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; font-weight: bold; }
+        .home-btn { position: absolute; left: 15px; cursor: pointer; font-size: 1.3rem; }
+        .container { padding: 15px; max-width: 800px; margin: 0 auto; padding-bottom: 80px; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .section-title { font-weight: bold; color: var(--primary-dark); margin: 20px 0 10px 5px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 大月曆樣式 - 強化版 */
+        .calendar-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 20px; }
+        .calendar-header { background: #eef1f4; padding: 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #eee; }
+        .day-label { padding: 8px 0; text-align: center; font-size: 0.7rem; color: var(--text-light); background: #f9f9f9; }
+        .day-cell { min-height: 90px; padding: 4px; border-right: 1px solid #eee; border-bottom: 1px solid #eee; font-size: 0.75rem; cursor: pointer; background: #fff; vertical-align: top; }
+        .day-num { font-weight: bold; margin-bottom: 4px; display: block; }
+        .sch-tag { background: #e4e8eb; font-size: 0.6rem; padding: 2px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 2px solid var(--primary); color: #333; display: block; }
+
+        /* 待辦項目樣式 */
+        .todo-item { border-left: 4px solid var(--warning); padding: 12px; background: #fff; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .todo-info b { display: block; font-size: 0.95rem; color: #333; }
+        .todo-info small { color: #888; font-size: 0.75rem; }
+        .btn-check { background: var(--white); border: 2px solid var(--success); color: var(--success); padding: 6px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+
+        .btn-action { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: block; text-align: center; text-decoration: none; }
+        .form-section { background: var(--white); padding: 20px; border-radius: var(--radius); box-shadow: var(--card-shadow); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: var(--primary); }
+        .input-group input, .input-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        .edit-table { width: 100%; border-collapse: collapse; }
+        .edit-table input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:999; display:none; justify-content:center; align-items:center; font-weight:bold; }
+    </style>
+</head>
+<body>
+<div id="loading">⌛ 正在與雲端同步...</div>
+<header><div class="home-btn" id="backBtn" onclick="goHome()" style="display:none;">❮</div> 三柳柳 OMS v7.3</header>
+<div class="container">
+    <div id="page-dashboard" class="page active">
+        <div class="section-title">📅 產程主控台 (點日期排程)</div>
+        <div class="calendar-wrap">
+            <div class="calendar-header">
+                <div onclick="prevMonth()" style="padding:10px; cursor:pointer;">◀</div>
+                <div id="monthDisplay"></div>
+                <div onclick="nextMonth()" style="padding:10px; cursor:pointer;">▶</div>
+            </div>
+            <div class="calendar-grid"><div class="day-label">日</div><div class="day-label">一</div><div class="day-label">二</div><div class="day-label">三</div><div class="day-label">四</div><div class="day-label">五</div><div class="day-label">六</div></div>
+            <div class="calendar-grid" id="calendarDays"></div>
+        </div>
+        <div class="section-title">🚀 待入庫清單 (提醒助理登 ERP)</div>
+        <div id="inventoryTodoList"><div style="text-align:center; padding:15px; color:#999;">讀取中...</div></div>
+        <div class="section-title">📝 待排產訂單</div>
+        <div id="orderTodoList"></div>
+        <button class="btn-action" onclick="goTo('page-order')" style="background:var(--accent); margin-top:20px;">📝 新增客戶訂單</button>
+    </div>
+    <div id="page-order" class="page"><div class="form-section"><h3>📝 新增訂單</h3><div class="input-group"><label>客戶</label><input type="text" id="orderClient"></div><div class="input-group"><label>品名</label><input type="text" id="orderProduct"></div><div style="display:flex; gap:10px;"><div class="input-group" style="flex:1;"><label>數量</label><input type="number" id="orderQty"></div><div class="input-group" style="flex:1;"><label>規格</label><input type="text" id="orderSpec"></div></div><div class="input-group"><label>備註</label><textarea id="orderNote" rows="2"></textarea></div><button class="btn-action" onclick="submitOrder()">存檔</button><button class="btn-action" onclick="goHome()" style="background:#ccc;">返回</button></div></div>
+    <div id="page-schedule" class="page"><div class="form-section"><h3>⚙️ 產程編排</h3><div class="input-group"><label>日期</label><input type="date" id="scheduleDate"></div><button class="btn-action" onclick="addScheduleRow()" style="background:var(--success); width:auto; padding:8px 15px; margin-bottom:15px;">+ 新增項目</button><table class="edit-table" id="scheduleTable"><thead><tr><th>品名</th><th style="width:20%">量</th><th style="width:35%">備註</th><th></th></tr></thead><tbody></tbody></table><button class="btn-action" onclick="submitSchedule()">儲存計畫並銷單</button><button class="btn-action" onclick="goHome()" style="background:#ccc;">返回</button></div></div>
+</div>
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycby6_Z9fKVcnky7GhB2aT9EWgXTu7aZBTZIeDgcTCk_e3RDvlpp9AO4K-dBmo1P_E7Ks/exec";
+    let currentViewDate = new Date(), allSchedules = {}, pendingIndices = [];
+
+    function goHome() { 
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-dashboard').classList.add('active');
+        document.getElementById('backBtn').style.display = 'none';
+        renderCalendarBase(); 
+        fetchCloudData();
+    }
+
+    // 先畫出空的月曆格子，避免空白
+    function renderCalendarBase() {
+        const year = currentViewDate.getFullYear(), month = currentViewDate.getMonth();
+        document.getElementById('monthDisplay').innerText = `${year} 年 ${month + 1} 月`;
+        const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
+        const grid = document.getElementById('calendarDays'); grid.innerHTML = '';
+        for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div')).className='day-cell';
+        for(let d=1; d<=daysInMonth; d++) {
+            const cell = document.createElement('div'); cell.className='day-cell';
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            cell.id = `day-${dateStr}`;
+            cell.innerHTML = `<span class="day-num">${d}</span><div class="content-area"></div>`;
+            cell.onclick = () => goTo('page-schedule', dateStr);
+            grid.appendChild(cell);
+        }
+    }
+
+    function fetchCloudData() {
+        // 抓月曆資料
+        fetch(`${API_URL}?type=allSchedules`).then(res => res.json()).then(data => {
+            allSchedules = data;
+            for(let dateStr in data) {
+                const area = document.querySelector(`#day-${dateStr} .content-area`);
+                if(area) {
+                    area.innerHTML = '';
+                    data[dateStr].forEach(it => {
+                        const tag = document.createElement('div'); tag.className='sch-tag'; tag.innerText = `${it.name} x${it.qty}`;
+                        area.appendChild(tag);
+                    });
+                }
+            }
+        });
+        // 抓待辦與訂單
+        fetch(`${API_URL}?type=todoInventory`).then(res => res.json()).then(data => {
+            const list = document.getElementById('inventoryTodoList'); list.innerHTML = '';
+            if(!data || data.length===0) list.innerHTML = '<div style="text-align:center; padding:15px; color:#8da399;">✅ 已全數入庫</div>';
+            else data.forEach(todo => {
+                const div = document.createElement('div'); div.className = 'todo-item';
+                div.innerHTML = `<div class="todo-info"><b>${todo.items.map(i=>i.name).join('、')}</b><small>${todo.date}</small></div><button class="btn-check" onclick="markDone(${todo.rowIndex})">已入 ERP</button>`;
+                list.appendChild(div);
+            });
+        });
+        fetch(`${API_URL}?type=pendingOrders`).then(res => res.json()).then(data => {
+            const list = document.getElementById('orderTodoList'); list.innerHTML = '';
+            if(data) data.forEach(ord => {
+                const div = document.createElement('div'); div.className='todo-item'; div.style.borderLeftColor='#6d8293';
+                div.innerHTML = `<div><b>${ord.client}-${ord.product}</b><small>${ord.qty}${ord.spec}</small></div><button class="btn-check" style="border-color:#6d8293; color:#6d8293" onclick="autoSchedule('${ord.product}','${ord.spec}','${ord.qty}','${ord.note}',${ord.rowIndex})">排程</button>`;
+                list.appendChild(div);
+            });
+        });
+    }
+
+    function autoSchedule(n,s,q,m,idx) { pendingIndices = [idx]; const tom = new Date(); tom.setDate(tom.getDate()+1); goTo('page-schedule', tom.toISOString().split('T')[0]); addScheduleRow({name:n, spec:s, qty:q, note:m}); }
+    function addScheduleRow(it = {name:"", spec:"", qty:"", note:""}) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td><input type="text" class="n" value="${it.name}"></td><td><input type="number" class="q" value="${it.qty}"></td><td><input type="text" class="m" value="${it.note}"></td><td><span onclick="this.closest('tr').remove()" style="color:red; cursor:pointer">×</span><input type="hidden" class="s" value="${it.spec}"></td>`;
+        document.querySelector("#scheduleTable tbody").appendChild(row);
+    }
+    function submitSchedule() {
+        const date = document.getElementById('scheduleDate').value;
+        const rows = document.querySelectorAll("#scheduleTable tbody tr");
+        let items = [];
+        rows.forEach(r => { if(r.querySelector(".n").value) items.push({name:r.querySelector(".n").value, qty:r.querySelector(".q").value, note:r.querySelector(".m").value, spec:r.querySelector(".s").value}); });
+        if(items.length===0) return alert("請至少輸入一個項目");
+        sendData({ type:"產程", values:[date, JSON.stringify(items), "否"], updateIndices:pendingIndices }, "產程存檔成功！");
+        pendingIndices = [];
+    }
+    function markDone(idx) { if(confirm("確定已入 ERP？")) sendData({type:"標記入庫", rowIndex:idx}, "已完成標記"); }
+    function sendData(p, m) {
+        document.getElementById('loading').style.display='flex';
+        fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(p)}).then(() => { alert(m); goHome(); }).finally(()=>document.getElementById('loading').style.display='none');
+    }
+    function goTo(id, date=null) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('backBtn').style.display = 'block';
+        if(id==='page-schedule') {
+            document.getElementById('scheduleDate').value = date || new Date().toISOString().split('T')[0];
+            document.querySelector("#scheduleTable tbody").innerHTML = '';
+            if(allSchedules[date]) allSchedules[date].forEach(it => addScheduleRow(it)); else if(!date) addScheduleRow();
+        }
+        window.scrollTo(0,0);
+    }
+    function prevMonth() { currentViewDate.setMonth(currentViewDate.getMonth()-1); goHome(); }
+    function nextMonth() { currentViewDate.setMonth(currentViewDate.getMonth()+1); goHome(); }
+    window.onload = goHome;
+</script>
+</body>
+</html>
